@@ -130,7 +130,7 @@ class SeparableBottleneck(nn.Module):
 
 class X2(nn.Module):
     def __init__(self, num_classes):
-        super(FastENet, self).__init__()
+        super(X2, self).__init__()
         
         # Initial Block: from 1 channel (grayscale) to 16 channels
         self.initial = InitialBlock(in_channels=1, out_channels=16)
@@ -147,7 +147,7 @@ class X2(nn.Module):
         # Stage 3: One block to further process the features (using mild dilation)
         self.stage3_0 = SeparableBottleneck(128, 128, dilation=2, dropout_prob=0.1)
 
-        # new ASPP module
+        # ASPP module
         self.aspp = ASPP(in_channels=128, out_channels=128, atrous_rates=[6,12,18])
         
         # Simplified Decoder:
