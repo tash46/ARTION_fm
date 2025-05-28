@@ -73,7 +73,7 @@ class CrossEntropyDiceLoss(nn.Module):
         dice_loss = self.dice(preds, targets)
         return ce_loss + dice_loss
 
-def train_enet(labeled_loader, val_loader, num_epochs=10):
+def train_x3(labeled_loader, val_loader, num_epochs=10):    #change the model name here
     print("Start Training.")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -175,5 +175,5 @@ if __name__ == "__main__":
 
     train_loader, val_loader = get_loaders_from_config(args.config, batch_size=args.batch_size)
     
-    train_enet(train_loader, val_loader, num_epochs=args.epochs)
+    train_x3(train_loader, val_loader, num_epochs=args.epochs)    #change the function name here
     
