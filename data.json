@@ -1,0 +1,6 @@
+{
+  "train_image_dir": "",  #train images directory
+  "train_mask_dir": "",    #train masks directory
+  "val_image_dir": "",    #validation images directory
+  "val_mask_dir": ""      #validation masks directory
+}
