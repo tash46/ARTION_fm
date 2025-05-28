@@ -127,7 +127,7 @@ class SeparableBottleneck(nn.Module):
 
 class X3(nn.Module):
     def __init__(self, num_classes):
-        super(FastENet, self).__init__()
+        super(X3, self).__init__()
         # encoder
         self.initial   = InitialBlock(1, 16)
         self.stage1_0  = SeparableBottleneck(16,  64, downsample=True,  dropout_prob=0.01)
@@ -139,7 +139,7 @@ class X3(nn.Module):
         # multi-scale context
         self.aspp      = ASPP(in_channels=128, out_channels=128, atrous_rates=[6,12,18])
 
-        # decoder—level 1 (H/8 → H/4)
+        # decoder—level 1 
         self.up1       = nn.ConvTranspose2d(128,  64, kernel_size=3, stride=2,
                                             padding=1, output_padding=1, bias=False)
         self.bn_up1    = nn.BatchNorm2d(64)
@@ -149,7 +149,7 @@ class X3(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        # decoder—level 2 (H/4 → H/2)
+        # decoder—level 2 
         self.up2       = nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2,
                                             padding=1, output_padding=1, bias=False)
         self.bn_up2    = nn.BatchNorm2d(32)
@@ -159,16 +159,15 @@ class X3(nn.Module):
             nn.ReLU(inplace=True),
         )
 
-        # aux_head1 taps into level-2 feature (H/2) 
+        # aux_head1 taps into level-2 feature
         self.aux1 = nn.Conv2d(32, num_classes, kernel_size=1)
-        # aux_head2 taps into level-1 feature (H/4)
+        # aux_head2 taps into level-1 feature
         self.aux2 = nn.Conv2d(64, num_classes, kernel_size=1)
 
-        # final classifier (upsampled to full res)
+        # final classifier
         self.classifier = nn.Conv2d(32, num_classes, kernel_size=1, bias=True)
 
     def forward(self, x):
-        # 1) Encoder → ASPP → decoder up to level-1 and level-2…
         x0 = self.initial(x)                     # [B,16,H/2,W/2]
         x1 = self.stage1_1(self.stage1_0(x0))    # [B,64,H/4,W/4]
         x2 = self.stage2_1(self.stage2_0(x1))    # [B,128,H/8,W/8]
@@ -187,19 +186,17 @@ class X3(nn.Module):
         y2 = torch.cat([y2, x0], dim=1)          # fuse skip @ H/2
         y2 = self.conv_up2(y2)                   # [B,32,H/2,W/2]
 
-        # ——— Deep supervision outputs ———
-        # upsample aux2 (H/4 → H,W)
+        # upsample aux2
         aux2_out = F.interpolate(
             self.aux2(y1), size=(x.shape[2], x.shape[3]),
             mode='bilinear', align_corners=True
         )
-        # upsample aux1 (H/2 → H,W)
+        # upsample aux1
         aux1_out = F.interpolate(
             self.aux1(y2), size=(x.shape[2], x.shape[3]),
             mode='bilinear', align_corners=True
         )
 
-        # final upsample & main output
         y = F.interpolate(y2, scale_factor=2, mode='bilinear', align_corners=True)  # [B,32,H,W]
         main_out = self.classifier(y)                                               # [B,C,H,W]
 
