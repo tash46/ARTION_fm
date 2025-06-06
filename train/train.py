@@ -73,24 +73,24 @@ class CrossEntropyDiceLoss(nn.Module):
         dice_loss = self.dice(preds, targets)
         return ce_loss + dice_loss
 
-def train_x3(labeled_loader, val_loader, num_epochs=10):    #change the model name here
+def train_x3(labeled_loader, val_loader, num_epochs=10):    # Change the model name here
     print("Start Training.")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    model = X3(num_classes=4).cuda()    #change the model here
+    model = X3(num_classes=4).cuda()    # Change the model here
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
     criterion = CrossEntropyDiceLoss(num_classes=4).to(device)
     best_val_dice = 0.0
-    best_model_path = f'D:/'  #best model saving path
+    best_model_path = f'D:/'  # Best model saving path
 
     train_losses = []
     val_losses = []
     val_dices = []
 
-    log_file_path = f'D:/'  #training log file saving path
+    log_file_path = f'D:/'  # Training log file saving path
     with open(log_file_path, 'w') as log_file:
         log_file.write("Epoch\tTrain Loss\tVal Loss\tVal Dice\n")
 
@@ -105,6 +105,9 @@ def train_x3(labeled_loader, val_loader, num_epochs=10):    #change the model na
                     inputs, targets = inputs.to(device), targets.to(device)
                     
                     outputs = model(inputs)
+                    if isinstance(outputs, tuple):
+                        outputs = outputs[0]
+                        
                     loss = criterion(outputs, targets)
                     
                     optimizer.zero_grad()
@@ -121,7 +124,11 @@ def train_x3(labeled_loader, val_loader, num_epochs=10):    #change the model na
             with torch.no_grad():
                 for val_inputs, val_targets in val_loader:
                     val_inputs, val_targets = val_inputs.to(device), val_targets.to(device)
+                    
                     val_outputs = model(val_inputs)
+                    if isinstance(val_outputs, tuple):
+                        val_outputs = val_outputs[0]
+                        
                     val_loss += criterion(val_outputs, val_targets).item()
 
                     val_dice += multiclass_dice_score(val_outputs, val_targets, num_classes=4)
@@ -162,7 +169,7 @@ def train_x3(labeled_loader, val_loader, num_epochs=10):    #change the model na
     fig.tight_layout()
     plt.title('Training and Validation Metrics')
     fig.legend(loc="upper right", bbox_to_anchor=(1,1), bbox_transform=ax1.transAxes)
-    plt.savefig(f'./metrics.png')  #save metrics plot
+    plt.savefig(f'./metrics.png')  # Save metrics plot
     
     #return model
 
