@@ -41,6 +41,8 @@ def predict(image_path, weight_path, model_type):
     input_tensor = preprocess_image(image_path)
     with torch.no_grad():
         output = model(input_tensor)  # output: [1, 4, 1024, 1024]
+        if isinstance(output, tuple):
+            output = output[0]
         prediction = torch.argmax(output, dim=1).squeeze(0).cpu().numpy()  # shape: [H, W]
     return prediction
 
@@ -72,19 +74,6 @@ def compute_iou(prediction, ground_truth, num_classes=4):
             ious.append(intersection / union)
     return ious
 
-def overlay_edges(image_path, prediction, output_path, edge_color=(0, 255, 0), thickness=1):
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    image_color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-
-    overlay = image_color.copy()
-    for cls in range(1, 4):  # skip class 0 if it's background
-        mask = (prediction == cls).astype(np.uint8) * 255
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        color = tuple(int(x) for x in np.random.randint(0, 255, 3))  # random color per class
-        overlay = cv2.drawContours(overlay, contours, -1, color, thickness)
-
-    cv2.imwrite(output_path, overlay)
-
 def main():
     parser = argparse.ArgumentParser(description='Predict with a trained model, compute IoU and overlay mask edges')
     parser.add_argument('--weight', required=True, type=str, help='Path to the model weight file')
@@ -95,9 +84,7 @@ def main():
         
     # Create output directories if they don't exist
     output_dir = 'predict/exp16'  #directory path to save predictions
-    overlay_dir = os.path.join(output_dir, 'overlay')  #directory path to save overlayed predictions
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(overlay_dir, exist_ok=True)
     
     image_files = sorted(os.listdir(args.image))
     total_inference_time = 0
@@ -130,11 +117,6 @@ def main():
         output_path = os.path.join(output_dir, f"{os.path.splitext(image_file)[0]}.png")
         save_prediction(prediction, output_path)
         print(f"Saved prediction for {image_file} to {output_path}")
-        
-        # Create an overlay image with predicted mask edges
-        overlay_output_path = os.path.join(overlay_dir, f"{os.path.splitext(image_file)[0]}_overlay.png")
-        overlay_edges(image_path, prediction, overlay_output_path, edge_color=(0, 0, 255), thickness=2)
-        print(f"Saved overlay for {image_file} to {overlay_output_path}")
     
     if count > 0:
         avg_time = total_inference_time / count
